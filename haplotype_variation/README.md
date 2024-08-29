@@ -1,6 +1,11 @@
 This folder contains the code used to analyse the sequence variation between haplotypes
 
 ```
+# for call variants from whole-genome alignment, see myanchorwave_all_gene.sh and mysyri.sh
+# for map short or long reads to the assembly and variant calling from reads, see map_short_snakemake and map_long_snakemake
+
+# for later parsing syri output and finding common variants, see below
+
 # custom python script to parsy syri variant calling results
 ./parse_syri_out.py Rabiosa_syri.out Rabiosa_syri.snp Rabiosa_syri.indel Rabiosa_syri.pav
 
