@@ -8,30 +8,30 @@
 # prepare data
 # get chr from gff3
 # copy hap1 gene.gff3 here in this folder
-# cp /home/yutachen/public/Yutangchen/Rabiosa_annotation/EVM_dip/filter_hap1/EVM.gene.gff3 ./
-# grep '^chr' EVM.gene.gff3 > hap1.chr.gene.gff3
+cp /home/yutachen/public/Yutangchen/Rabiosa_annotation/EVM_dip/filter_hap1/EVM.gene.gff3 ./
+grep '^chr' EVM.gene.gff3 > hap1.chr.gene.gff3
 
 # select only chromsomes from hap1 and hap2 assembly
 
 # make chr name.lst
-# grep 'chr' assembly/rabiosa_hap1.fa | sed 's/>//' > name.lst
+grep 'chr' assembly/rabiosa_hap1.fa | sed 's/>//' > name.lst
 
-# source ~/anaconda3/etc/profile.d/conda.sh
-# conda activate seqtk
+source ~/anaconda3/etc/profile.d/conda.sh
+conda activate seqtk
 
-# seqtk subseq assembly/rabiosa_hap1.fa name.lst > assembly/rabiosa_hap1_chr.fa
-# seqtk subseq assembly/rabiosa_hap2.fa name.lst > assembly/rabiosa_hap2_chr.fa
+seqtk subseq assembly/rabiosa_hap1.fa name.lst > assembly/rabiosa_hap1_chr.fa
+seqtk subseq assembly/rabiosa_hap2.fa name.lst > assembly/rabiosa_hap2_chr.fa
 
 # now lift over gff
 
 source ~/anaconda3/etc/profile.d/conda.sh
 conda activate anchorwave
 
-# anchorwave gff2seq -i hap1.chr.gene.gff3 -r assembly/rabiosa_hap1_chr.fa -m 20 -o cds.fa
-# gmap_build --dir=./hap1 --genomedb=hap1 assembly/rabiosa_hap1_chr.fa
-# gmap_build --dir=./hap2 --genomedb=hap2 assembly/rabiosa_hap2_chr.fa
-# gmap -t 60 -A -f samse -d hap1 -D hap1/ cds.fa > Rabiosa_hap1.sam
-# gmap -t 60 -A -f samse -d hap2 -D hap2/ cds.fa > Rabiosa_hap2.sam
+anchorwave gff2seq -i hap1.chr.gene.gff3 -r assembly/rabiosa_hap1_chr.fa -m 20 -o cds.fa
+gmap_build --dir=./hap1 --genomedb=hap1 assembly/rabiosa_hap1_chr.fa
+gmap_build --dir=./hap2 --genomedb=hap2 assembly/rabiosa_hap2_chr.fa
+gmap -t 60 -A -f samse -d hap1 -D hap1/ cds.fa > Rabiosa_hap1.sam
+gmap -t 60 -A -f samse -d hap2 -D hap2/ cds.fa > Rabiosa_hap2.sam
 
 # whole genome alignment
 anchorwave genoAli -i hap1.chr.gene.gff3 -as cds.fa -r assembly/rabiosa_hap1_chr.fa -a Rabiosa_hap2.sam -ar Rabiosa_hap1.sam -s assembly/rabiosa_hap2_chr.fa -t 30 -IV -n Rabiosa_hap.anchors -o Rabiosa_hap.maf -f Rabiosa_hap.f.maf -m 20 > Rabiosa_hap.log
@@ -42,7 +42,7 @@ cat Rabiosa_hap_anchorwave.sam | samtools view -O BAM --reference  assembly/Rabi
 samtools index Rabiosa_hap_anchorwave.bam
 
 # convert sam to paf for constructing the pangenome 
-# mkdir chr_sam chr_paf
+mkdir chr_sam chr_paf
 for i in {1..7}
 do 
     samtools view -h --reference  assembly/Rabiosa_hap1_chr.fa Rabiosa_hap_anchorwave.bam chr${i} > chr_sam/chr${i}.sam
