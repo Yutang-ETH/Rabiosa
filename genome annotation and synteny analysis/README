@@ -1,5 +1,10 @@
 This folder contains codes used for genome annotation and synteny analysis
 
+Steps for genome annotation and repeat annotation are described in annotation.pdf. Please download the file to see more.
+
+make_circos_plot_23082024.R is the R script to generate the circos plot
+mydot_new.R is the R plot to make the dot plot of the genome synteny
+
 To detect collinear blocks, mcscanx python version was used. You could find the tutorial here, https://github.com/tanghaibao/jcvi/wiki/MCscan-(Python-version).
 
 Briefly, what I did is the following:
