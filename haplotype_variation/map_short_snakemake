@@ -1,0 +1,55 @@
+# 08.09.2022
+
+# map rabiosa short reads to hap1 assembly to call variants
+
+myfastq1="/home/yutachen/public/Yutangchen/Rabiosa_data/tmp/Ryegrass_SG700bp_trimmed_fastq_1P.gz"
+myfastq2="/home/yutachen/public/Yutangchen/Rabiosa_data/tmp/Ryegrass_SG700bp_trimmed_fastq_2P.gz"
+myref = "assembly/rabiosa_hap1_chr.fa"
+
+rule vcf:
+    input:
+        "vcf_short/small_variant.vcf"
+
+rule index_bwa:
+    input:
+        ref=myref
+    output:
+        bwt=myref+'.bwt',
+        amb=myref+'.amb',
+        ann=myref+'.ann',
+        pac=myref+'.pac',
+        sa=myref+'.sa'
+    shell:
+        '''
+        bwa index -a bwtsw {input.ref}
+        '''
+
+rule map_bwa_short:
+    input:
+        ref=myref,
+        bwt=myref+'.bwt',
+        amb=myref+'.amb',
+        ann=myref+'.ann',
+        pac=myref+'.pac',
+        sa=myref+'.sa',
+        fq1=myfastq1,
+        fq2=myfastq2
+    output:
+        "map_short/short_read.bam"
+    threads: 48
+    shell:
+        '''
+        bwa mem -t {threads} {input.ref} {input.fq1} {input.fq2} | samtools view -@ {threads} -Sbh | samtools sort -@ {threads} -o {output}
+        '''
+
+rule SNP_call_bcftools:
+    input:
+        bam="map_short/short_read.bam",
+        ref=myref
+    output:
+        "vcf_short/small_variant.vcf"
+    shell:
+        '''
+        bcftools mpileup -a AD,DP -A -f {input.ref} {input.bam} | bcftools call -mv > {output}
+        '''
+
