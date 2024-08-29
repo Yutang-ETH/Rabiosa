@@ -1,0 +1,79 @@
+# 08.09.2022
+
+# map rabiosa long reads to hap1 assembly to call variants
+
+mylongread="/home/yutachen/public/Yutangchen/Rabiosa_data/input/ONT_G4_q7a2kf.fq.gz"
+myref = "assembly/rabiosa_hap1_chr.fa"
+
+rule vcf:
+    input:
+        "vcf_long/large_variant.vcf"
+
+rule count_kmer:
+    input:
+        myref
+    output:
+        directory("merylDB")
+    shell:
+        '''
+        meryl count k=15 output {output} {input}
+        '''
+
+rule select_kmer:
+    input:
+        "merylDB"
+    output:
+        "repetitive_k15.txt"
+    shell:
+        '''
+        meryl print greater-than distinct=0.998 {input} > {output}
+        '''   
+
+rule map_long:
+    input:
+        ref=myref,
+        longread=mylongread,
+        repeat="repetitive_k15.txt"
+    output:
+        "map_long/long_read.sam"
+    threads: 48
+    shell:
+        '''
+        winnowmap -W {input.repeat} -t {threads} -R "@RG\tID:1\tSM:PRabiosa" -ax map-ont {input.ref} {input.longread} --secondary=no > {output}
+        '''
+
+rule sort_sam:
+    input:
+        "map_long/long_read.sam"
+    output:
+        "map_long/long_read.bam"
+    threads: 48
+    shell:
+        '''
+        samtools view -@ {threads} -Sbh {input} | samtools sort -@ {threads} -o {output}
+        '''
+
+rule index_bam:
+    input:
+        "map_long/long_read.bam"
+    output:
+        "map_long/long_read.bam.bai"
+    threads: 48
+    shell:
+        '''
+        samtools index {input}
+        '''
+
+rule sv_call_sniffles:
+    input:
+        bam="map_long/long_read.bam",
+        ref=myref,
+        index="map_long/long_read.bam.bai"
+    output:
+        "vcf_long/large_variant.vcf"
+    threads: 48
+    shell:
+        '''
+        sniffles -i {input.bam} -v {output} --minsvlen 50 -t {threads} 
+        '''
+
