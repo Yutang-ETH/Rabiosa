@@ -15,7 +15,7 @@ hap2=Rabiosa_hap2_chr.fa
 mypaf=Rabiosa_all_chr.paf
 
 # run syri
-# syri -c $mypaf -r $hap1 -q $hap2 -F P -f --prefix Rabiosa_ --cigar --nc 7
+syri -c $mypaf -r $hap1 -q $hap2 -F P -f --prefix Rabiosa_ --cigar --nc 7
 
 # extract different types of variants from syri output
 for x in $(cut -f11 Rabiosa_syri.out | sort | uniq)
