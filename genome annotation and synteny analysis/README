@@ -1,1 +1,22 @@
 This folder contains codes used for genome annotation and synteny analysis
+
+To detect collinear blocks, mcscanx python version was used. You could find the tutorial here, https://github.com/tanghaibao/jcvi/wiki/MCscan-(Python-version).
+
+Briefly, what I did is the following:
+
+1) with the gene annotation gff file, make a bed file to indicate gene position
+
+python -m jcvi.formats.gff bed --type=mRNA --key=ID --primary_only rabiosa.gff -o rabiosa.bed
+
+python -m jcvi.formats.gff bed --type=mRNA --key=ID --primary_only barley.gff -o barley.bed
+
+2) with the cds.fasta derived from our genome annotatioin, make a cds file required by mcscanx. This cds file actually is the cds.fasta, but I guess the purpose here is to verify the format  
+
+python -m jcvi.formats.fasta format rabiosa_cds.fa rabiosa.cds
+
+python -m jcvi.formats.fasta format barley_cds.fa barley.cds
+
+3) run the mcscanx program
+
+python -m jcvi.compara.catalog ortholog rabiosa barley --no_strip_names
+
