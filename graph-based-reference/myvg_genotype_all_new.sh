@@ -9,14 +9,14 @@ myvcf="pangenie_snp_rename.vcf.gz"
 myprefix="Raball"
 
 # first autoindex the graph for alignment
-# vg autoindex --workflow giraffe --prefix ${myprefix} --ref-fasta ../${myfa} --vcf ../${myvcf} --threads 60 --tmp-dir ../tmp 
+vg autoindex --workflow giraffe --prefix ${myprefix} --ref-fasta ../${myfa} --vcf ../${myvcf} --threads 60 --tmp-dir ../tmp 
 
 # giraffe mapping GBS reads to graph
-# mkdir mygam
-# cat ../sample.lst | parallel -j 5 -k "vg giraffe -Z ${myprefix}.giraffe.gbz -m ${myprefix}.min -d ${myprefix}.dist -f ../GBS/{}.fastq.trim.fq -t 12 -N {} > mygam/{}.gam"
+mkdir mygam
+cat ../sample.lst | parallel -j 5 -k "vg giraffe -Z ${myprefix}.giraffe.gbz -m ${myprefix}.min -d ${myprefix}.dist -f ../GBS/{}.fastq.trim.fq -t 12 -N {} > mygam/{}.gam"
 
 # count read support
-# mkdir mypack
+mkdir mypack
 cat ../sample.lst | parallel -j 5 -k "vg pack -x ${myprefix}.giraffe.gbz -t 12 -g mygam/{}.gam -o mypack/{}.pack -Q 5 -s 5"
 
 # calculate snarl
