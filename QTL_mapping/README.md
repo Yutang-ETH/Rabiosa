@@ -17,4 +17,7 @@ using this phenoallqtl_plus_em.R script
 
 # summarize the qtl mapping resutls
 using this define_qtl_loci.R script
+
+# calculate percent variance explained
+cal_percent_variance_explained.R
 ```
