@@ -1,0 +1,207 @@
+# 02.08.2022
+
+# write a snakemake pipeline to further process vcf from GBS
+
+myparent="rabiosa"
+myinput="vcf_f/snp_f.vcf"
+missingrate="30"
+
+rule final_vcf_statistics:
+    input:
+        "vcf_f/" + myparent + "_" + missingrate + "_final.stats"
+
+rule get_sample_names:
+    input:
+        myinput
+    output:
+        "sample_name.txt"
+    shell:
+        '''
+        bcftools view -h {input} | tail -1 | tr -s "\t" "\n" | tail -n +10 | cut -f1 -d"." | cut -f2 -d"/" > {output}
+        '''
+
+rule compress_vcf_f:
+    input:
+        myinput
+    output:
+        "vcf_f/snp_f.vcf.gz"
+    shell:
+        '''
+        bgzip -c {input} > {output}
+        '''
+
+rule reheader_vcf_f:
+    input:
+        vcf="vcf_f/snp_f.vcf.gz",
+        sample="sample_name.txt"
+    output:
+        "vcf_f/snp_f_renamed.vcf.gz"
+    shell:
+        '''
+        bcftools reheader -s {input.sample} {input.vcf} > {output}
+        '''
+
+rule extract_parent_vcf:
+    input:
+        "vcf_f/snp_f_renamed.vcf.gz"
+    output:
+        "vcf_f/parent.vcf"
+    params:
+        parent=myparent
+    shell:
+        '''
+        bcftools view -s {params.parent} {input} | bcftools view -i 'F_MISSING=0' > {output}        
+        '''
+
+rule extract_progeny_vcf:
+    input:
+        "vcf_f/snp_f_renamed.vcf.gz"
+    output:
+        "vcf_f/progeny.vcf"
+    params:
+        progeny="^"+myparent
+    shell:
+        '''
+        bcftools view -s {params.progeny} {input} > {output}
+        '''
+
+rule compress_parent_vcf:
+    input:
+        "vcf_f/parent.vcf"
+    output:
+        "vcf_f/parent.vcf.gz"
+    shell:
+        '''
+        bgzip -c {input} > {output}
+        '''
+
+rule compress_progeny_vcf:
+    input:
+        "vcf_f/progeny.vcf"
+    output:
+        "vcf_f/progeny.vcf.gz"
+    shell:
+        '''
+        bgzip -c {input} > {output}
+        '''
+
+rule index_parent_vcf:
+    input:
+        "vcf_f/parent.vcf.gz"
+    output:
+        "vcf_f/parent.vcf.gz.csi"
+    shell:
+        '''
+        bcftools index {input}
+        '''
+
+rule index_progeny_vcf:
+    input:
+        "vcf_f/progeny.vcf.gz"
+    output:
+        "vcf_f/progeny.vcf.gz.csi"
+    shell:
+        '''
+        bcftools index {input}
+        '''
+
+rule intersect_parent_progeny_vcf:
+    input:
+        parentvcf="vcf_f/parent.vcf.gz",
+        parentindex="vcf_f/parent.vcf.gz.csi",
+        progenyvcf="vcf_f/progeny.vcf.gz",
+        progenyindex="vcf_f/progeny.vcf.gz.csi"
+    output:
+        "vcf_f/0002.vcf"
+    shell:
+        '''
+        bcftools isec -p vcf_f {input.progenyvcf} {input.parentvcf}
+        '''
+
+rule compress_common_vcf:
+    input:
+        "vcf_f/0002.vcf"
+    output:
+        "vcf_f/0002.vcf.gz"
+    shell:
+        '''
+        bgzip -c {input} > {output}
+        '''
+
+rule index_common_vcf:
+    input:
+        "vcf_f/0002.vcf.gz"
+    output:
+        "vcf_f/0002.vcf.gz.csi"
+    shell:
+        '''
+        bcftools index {input}
+        '''
+
+rule merge_parent_common_vcf:
+    input:
+        parentvcf="vcf_f/parent.vcf.gz",
+        parentindex="vcf_f/parent.vcf.gz.csi",
+        commonvcf="vcf_f/0002.vcf.gz",
+        commonindex="vcf_f/0002.vcf.gz.csi"
+    output:
+        merge="vcf_f/" + myparent + "_f.vcf"
+    shell:
+        '''
+        bcftools merge {input.parentvcf} {input.commonvcf} > {output.merge}
+        '''
+
+rule merge_parent_common_vcf_statistics:
+    input:
+        "vcf_f/" + myparent + "_f.vcf"
+    output:
+        "vcf_f/" + myparent + "_f.stats"
+    shell:
+        '''
+        rtg vcfstats {input} > {output}
+        '''
+
+rule calclate_missing_rate:
+    input:
+        "vcf_f/" + myparent + "_f.stats"
+    output:
+        "vcf_f/missingthreshold.txt"
+    params:
+        missingrate        
+    shell:
+        '''
+        echo $(($(grep 'Passed' {input} | cut -f2 -d":" | cut -f2 -d" ")*{params}/100)) > {output}
+        '''
+
+rule sample_with_higher_missingrate:
+    input:
+        missingrate="vcf_f/missingthreshold.txt",
+        stats="vcf_f/" + myparent + "_f.stats"
+    output:
+        "my_final_sample.txt"
+    shell:
+        '''
+        ./Missing_sample.sh {input.stats} $(cat {input.missingrate})
+        '''
+
+rule filter_sample_by_missingrate:
+    input:
+        sample="my_final_sample.txt",
+        vcf="vcf_f/" + myparent + "_f.vcf"
+    output:
+        "vcf_f/" + myparent + "_" + missingrate + "_final.vcf"
+    shell:
+        '''
+        bcftools view -S {input.sample} {input.vcf} > {output}
+        '''
+
+rule calculate_final_vcf_stats:
+    input:
+        "vcf_f/" + myparent + "_" + missingrate + "_final.vcf"
+    output:
+        "vcf_f/" + myparent + "_" + missingrate + "_final.stats"
+    shell:
+        '''
+        rtg vcfstats {input} > {output}
+        '''
+

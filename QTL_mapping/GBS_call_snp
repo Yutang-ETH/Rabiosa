@@ -1,0 +1,101 @@
+# 30.03.2022
+
+# want to make new genetic linkage maps based on the Rabisoa chromosomes
+
+# import os module
+import os
+
+# I copied trimmed GBS reads to the GBS folder in my working directory, not necessary, but just to avoid making a mess to the original files  
+# I combined GBS reads of Rabiosa
+# cat lmGbsJP_M2402_16_2.fastq.trim.fq lmGbsJP_M2402_16_3.fastq.trim.fq > /home/yutachen/public/Yutangchen/GBS_snakemake/rabiosa/GBS/rabiosa.fastq.trim.fq
+# also copied the rabiosa assembly to the genome folder in my working directory
+
+GBS = "GBS"
+myref = "genome/assembly.fa"
+
+# get a list of fastq file names 
+myfastq = os.listdir(GBS)
+
+# I want to remove any suffix in the fastq file name, only keep the sample name before the first dot
+mysample = []
+for fastq in myfastq:
+    mysample.append(fastq.split('.')[0])
+
+# mysample = mysample[:5]
+
+rule final_vcf:
+    input:
+        "vcf_f/snp_f.vcf"
+
+rule index_bwa:
+    input:
+        ref=myref
+    output:
+        bwt=myref+'.bwt',
+        amb=myref+'.amb',
+        ann=myref+'.ann',
+        pac=myref+'.pac',
+        sa=myref+'.sa'
+    shell:
+        '''
+        bwa index -a bwtsw {input.ref}
+        '''
+
+rule map_bwa_GBS:
+    input:
+        ref=myref,
+        bwt=myref+'.bwt',
+        amb=myref+'.amb',
+        ann=myref+'.ann',
+        pac=myref+'.pac',
+        sa=myref+'.sa',
+        fq=GBS+'/{sample}.fastq.trim.fq'
+    output:
+        "map/{sample}.bam"
+    threads: 5
+    shell:
+        '''
+        bwa mem -t {threads} {input.ref} {input.fq} | samtools view -@ {threads} -Sbh | samtools sort -@ {threads} -o {output}
+        '''
+
+rule SNP_call_bcftools:
+    input:
+        bam=expand("map/{sample}.bam", sample=mysample),
+        ref=myref
+    output:
+        "vcf/snp.vcf"
+    shell:
+        '''
+        bcftools mpileup -a AD,DP -I -A -f {input.ref} {input.bam} | bcftools call -mv > {output}
+        '''
+
+rule vcf_compress:
+    input:
+        "vcf/snp.vcf"
+    output:
+        "vcf/snp.vcf.gz"
+    shell:
+        '''
+        bgzip -c {input} > {output}
+        '''
+
+rule vcf_index:
+    input:
+        "vcf/snp.vcf.gz"
+    output:
+        "vcf/snp.vcf.gz.csi"
+    shell:
+        '''
+        bcftools index {input}
+        '''
+
+rule SNP_filtering:
+    input:
+        "vcf/snp.vcf.gz", 
+        "vcf/snp.vcf.gz.csi"
+    output:
+        "vcf_f/snp_f.vcf"
+    shell:
+        '''
+        bcftools filter -i 'QUAL>30 && INFO/DP>60' -r chr1,chr2,chr3,chr4,chr5,chr6,chr7 {input} | bcftools view -g het -v snps -m2 -M2 -q 0.03:minor -i 'F_MISSING<0.5' > {output}
+        '''
