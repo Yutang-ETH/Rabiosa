@@ -3,6 +3,11 @@ Code used for QTL mapping
 document what I did for QTL mapping
 
 ```
+# prior to QTL mapping, call SNPs with GBS
+# GBS_call_snp is the snakemake file to call SNPs
+# post_gbs_snakefile is the snakemake file to further process (reheader, filter individuals with too many missing SNPs, order the samples) the vcf file from last step 
+# Missing_sample.sh is used by post_gbs_snakefile to filter individuals with more than 30% of the SNPs missing genotypes
+
 # first of all, make the gentic linkage map using Lepmap3
 using this cal_distance.sh script
 
